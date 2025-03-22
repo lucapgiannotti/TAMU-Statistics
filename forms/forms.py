@@ -1,7 +1,7 @@
 from django import forms
 
 class SubmissionForm(forms.Form):
-    YEAR_CHOICES = [(str(year), str(year)) for year in range(2024, 2019, -1)]
+    YEAR_CHOICES = [(str(year), str(year)) for year in range(2024, 2018, -1)]
     TERM_CHOICES = [
         ('SPRING', 'SPRING'),
         ('SUMMER', 'SUMMER'),

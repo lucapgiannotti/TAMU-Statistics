@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPA Data Presentation</title>
+</head>
+<body>
+    <h1>GPA Data for {{ year }} - {{ term }} - {{ college }}</h1>
+    <table>
+        <thead>from django.shortcuts import render
+from django.http import HttpResponse
+from .models import GPAData  # Assuming you have a model to fetch GPA data
+
+def data_presentation_view(request):
+    year = request.GET.get('year')
+    term = request.GET.get('term')
+    college = request.GET.get('college')
+    
+    # Fetch data based on the selected parameters
+    gpa_data = GPAData.objects.filter(year=year, term=term, college=college)
+    
+    context = {
+        'gpa_data': gpa_data,
+        'year': year,
+        'term': term,
+        'college': college,
+    }
+    return render(request, 'dataPresentation/data_presentation.html', context)
+            <tr>
+                <th>Course</th>
+                <th>GPA</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in gpa_data %}
+            <tr>
+                <td>{{ data.course }}</td>
+                <td>{{ data.gpa }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
