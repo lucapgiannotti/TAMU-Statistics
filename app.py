@@ -77,6 +77,10 @@ if selected_file_info:
     overall_total_students = data['Total Students'].sum()
     data['Percentage'] = (data['Total Students'] / overall_total_students) * 100
 
+    st.write("#### 1.1.1. Total Students and Percentage by GPA Group")
+    st.write(f"**Total Students:** {overall_total_students:,}")
+    
+    st.dataframe(data[['GPA Group', 'Total Students', 'Percentage']])
     # GPA Midpoint Calculation
     def extract_gpa_midpoint(gpa_group):
         if gpa_group == '4.000':
@@ -87,8 +91,14 @@ if selected_file_info:
 
     data['GPA Midpoint'] = data['GPA Group'].apply(extract_gpa_midpoint)
 
+    
     st.write("#### 1.2. Aggregated Data: Gender-wise Performance")
     gender_summary = data[[col for col in data.columns if 'Male' in col or 'Female' in col]].sum()
+
+    # Remove numerical prefixes from index labels
+    new_index = [label.split('.')[0] for label in gender_summary.index]
+    gender_summary.index = new_index
+
     st.dataframe(gender_summary)
 
     # 2. Hypothesis Testing
@@ -105,11 +115,6 @@ if selected_file_info:
     sns.boxplot(x='Class Level', y='Student Count', data=data_melted, ax=ax_box)
     st.pyplot(fig_box)
 
-    # 2.2. Chi-Square Test: Independence between GPA groups and gender
-    st.write("#### 2.2. Independence between GPA groups and gender")
-    # Create a contingency table
-    contingency_table = data[['GPA Group', 'Freshman Male', 'Freshman Female', 'Sophomore Male', 'Sophomore Female', 'Junior Male', 'Junior Female', 'Senior Male', 'Senior Female']].set_index('GPA Group')
-    st.dataframe(contingency_table)
 
     # 3. Trend/Pattern Analysis
     st.write("## 3. Trend/Pattern Analysis")
