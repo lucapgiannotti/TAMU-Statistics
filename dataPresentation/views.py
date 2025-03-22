@@ -15,8 +15,8 @@ def data_presentation_view(request):
     
     context = {
         'gpa_data': gpa_data,
-        'year': year,
-        'term': term,
-        'college': college,
+        # 'year': year,
+        # 'term': term,
+        # 'college': college,
     }
     return render(request, 'dataPresentation/data_presentation.html', context)

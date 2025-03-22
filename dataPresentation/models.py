@@ -5,11 +5,19 @@ from django.db import models
 from django.db import models
 
 class GPAData(models.Model):
-    year = models.CharField(max_length=4)
-    term = models.CharField(max_length=10)
-    college = models.CharField(max_length=100)
-    course = models.CharField(max_length=100)
-    gpa = models.FloatField()
+    gpa_group = models.CharField(max_length=20)
+    freshman_male = models.IntegerField()
+    freshman_female = models.IntegerField()
+    freshman_total = models.IntegerField()
+    sophomore_male = models.IntegerField()
+    sophomore_female = models.IntegerField()
+    sophomore_total = models.IntegerField()
+    junior_male = models.IntegerField()
+    junior_female = models.IntegerField()
+    junior_total = models.IntegerField()
+    senior_male = models.IntegerField()
+    senior_female = models.IntegerField()
+    senior_total = models.IntegerField()
 
     def __str__(self):
-        return f"{self.year} - {self.term} - {self.college} - {self.course} - {self.gpa}"
+        return self.gpa_group
