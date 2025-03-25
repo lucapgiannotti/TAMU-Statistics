@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from pages.templates.menu import navigation_menu, credits
 import datetime
 import streamlit as st
+import plotly.express as px
+
 
 
 @st.cache_data
@@ -24,31 +26,29 @@ def filter_dataframe(df, exclude_summer, course_title_search, course_id_search):
         df = df[df["course"].fillna('').str.contains(course_id_search, case=False)]
 
 
-
-    # Do this before the user gets to the web page
-    for instructor in df['instructor'].unique():
-        if str(instructor).endswith(course_title_search):
-            df.loc[df['instructor'] == instructor, 'instructor'] = instructor[:-4]
-    for course in df['course'].unique():
-        if str(course)[-3:].startswith('2'):
-            instructor = df.loc[df['course'] == course, 'instructor'].iloc[0]
-            df.loc[df['course'] == course, 'instructor'] = instructor + " (H)"
-            
+    try:
+        # Do this before the user gets to the web page
+        for instructor in df['instructor'].unique():
+            if str(instructor).endswith(course_title_search.upper()):
+                df.loc[df['instructor'] == instructor, 'instructor'] = instructor[:-4]
+        for course in df['course'].unique():
+            if str(course)[-3:].startswith('2'):
+                instructor = df.loc[df['course'] == course, 'instructor'].iloc[0]
+                df.loc[df['course'] == course, 'instructor'] = instructor + " (H)"
+    except:
+        pass
             
     return df
 
 
 def process_dataframe(df):
     df = df.sort_values(by=['year', 'term', 'instructor'], ascending=[False, False, True])
-    df['instructor'] = df['instructor'].apply(lambda x: x + " (H)" if str(x)[-3:].startswith('2') else x)
     columns = ['instructor', 'year', 'term', 'gpa'] + [col for col in df.columns if
                                                         col not in ['instructor', 'year', 'term', 'gpa']]
     df = df[columns]
     return df
 
 def create_gpa_plot(df):
-    import plotly.express as px
-
     df = df.copy()
     df = df[(df['year'] >= 2019) & (df['year'] <= 2024)]
 
@@ -78,20 +78,21 @@ def create_gpa_plot(df):
     return fig
 
 def best_instructors(df):
-    current_year = datetime.datetime.now().year
-    cutoff = current_year - 2
-    recent_df = df[df["year"] >= cutoff]
-    best_df = (
-        recent_df.groupby("instructor")["gpa"]
-        .mean()
-        .sort_values(ascending=False)
-        .reset_index()
-        .rename(columns={"gpa": "Average GPA", "instructor": "Instructor"})
-    )
-    best_df = best_df.set_index(pd.Index(best_df["Instructor"]))
-    best_df.drop(columns=["Instructor"], inplace=True)
-    st.write("**Best Instructors by Average GPA (Last 2 Years)**")
-    st.dataframe(best_df)
+    with st.spinner('Loading best instructors...', show_time=True):
+        current_year = datetime.datetime.now().year
+        cutoff = current_year - 2
+        recent_df = df[df["year"] >= cutoff]
+        best_df = (
+            recent_df.groupby("instructor")["gpa"]
+            .mean()
+            .sort_values(ascending=False)
+            .reset_index()
+            .rename(columns={"gpa": "Average GPA", "instructor": "Instructor"})
+        )
+        best_df = best_df.set_index(pd.Index(best_df["Instructor"]))
+        best_df.drop(columns=["Instructor"], inplace=True)
+        st.write("**Best Instructors by Average GPA (Last 2 Years)**")
+        st.dataframe(best_df)
 
 
 def main():
@@ -109,13 +110,26 @@ def main():
     filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
 
     if filtered_df.empty:
-        st.write("No results found")
+        st.write("No results found.")
     elif course_title_search or course_id_search:
         processed_df = process_dataframe(filtered_df)
         fig = create_gpa_plot(processed_df)
+        st.markdown("---")
+        st.markdown("""
+            <style>
+            .small-font {
+            font-size:14px !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<p class="small-font">You can hover over the graph to see the exact GPA for each instructor and term. Double click on an instructor in the legend to highlight their GPA trend, or click to hide them.</p>', unsafe_allow_html=True)
         st.plotly_chart(fig)
         best_instructors(processed_df)
-        st.dataframe(processed_df.style.hide(axis="index"), width=2000, height=500)
+        renamed_df = processed_df.rename(columns={"instructor": "Instructor", "gpa": "Average GPA", "year": "Year", "term": "Term", "course": "Course", "section": "Section", "students": "Students", "total": "Students"})
+        renamed_df = renamed_df.set_index(pd.Index(renamed_df["Instructor"]))
+        renamed_df.drop(columns=["Instructor"], inplace=True)
+        st.dataframe(renamed_df.style.hide(axis="index"), width=2000, height=500)
    
 
 
