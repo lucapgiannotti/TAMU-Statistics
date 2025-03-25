@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pages.menu import navigation_menu, credits
+from pages.templates.menu import navigation_menu, credits
 
 navigation_menu()
 
@@ -11,13 +11,14 @@ DATA_DIR = "csv_data/gpaDistribution"
 
 @st.cache_data
 def load_file_info(data_dir):
-    file_list = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
-    file_info = []
-    for file in file_list:
-        parts = file.replace(".csv", "").split("_")
-        year, semester, college_name = parts[0], parts[1], " ".join(parts[2:])
-        file_info.append({"year": year, "semester": semester, "college": college_name, "file_path": os.path.join(data_dir, file)})
-    return file_info
+    with st.spinner('Loading data...'):
+        file_list = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+        file_info = []
+        for file in file_list:
+            parts = file.replace(".csv", "").split("_")
+            year, semester, college_name = parts[0], parts[1], " ".join(parts[2:])
+            file_info.append({"year": year, "semester": semester, "college": college_name, "file_path": os.path.join(data_dir, file)})
+        return file_info
 
 def load_data(file_path):
     try:

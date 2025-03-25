@@ -1,5 +1,6 @@
 import streamlit as st
-from pages.menu import navigation_menu, credits
+from pages.templates.menu import navigation_menu, credits
+import asyncio
 
 st.set_page_config(page_title="TAMU Statistics", page_icon="📊")
 
