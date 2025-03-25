@@ -18,21 +18,24 @@ def load_file_info(data_dir):
             parts = file.replace(".csv", "").split("_")
             year, semester, college_name = parts[0], parts[1], " ".join(parts[2:])
             file_info.append({"year": year, "semester": semester, "college": college_name, "file_path": os.path.join(data_dir, file)})
+        
         return file_info
 
 def load_data(file_path):
-    try:
-        data = pd.read_csv(file_path)
-        return data
-    except FileNotFoundError:
-        st.error(f"File not found: {file_path}")
-        st.stop()
-    except pd.errors.EmptyDataError:
-        st.error(f"No data in file: {file_path}")
-        st.stop()
-    except Exception as e:
-        st.error(f"Error reading file: {file_path}. Error: {e}")
-        st.stop()
+    with st.spinner("Loading data...", show_time=True):
+        try:
+            data = pd.read_csv(file_path)
+            return data
+        except FileNotFoundError:
+            st.error(f"File not found: {file_path}")
+            st.stop()
+        except pd.errors.EmptyDataError:
+            st.error(f"No data in file: {file_path}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Error reading file: {file_path}. Error: {e}")
+            st.stop()
+        
 
 def extract_gpa_midpoint(gpa_group):
     if gpa_group == '4.000':

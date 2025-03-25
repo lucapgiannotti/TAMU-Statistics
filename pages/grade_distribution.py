@@ -10,7 +10,7 @@ import plotly.express as px
 
 @st.cache_data
 def load_data(file_path):
-    with st.spinner('Loading total course data...'):
+    with st.spinner('Loading total course data...', show_time=True):
         return pd.read_csv(file_path)
 
 
@@ -24,19 +24,6 @@ def filter_dataframe(df, exclude_summer, course_title_search, course_id_search):
 
     if course_id_search:
         df = df[df["course"].fillna('').str.contains(course_id_search, case=False)]
-
-
-    try:
-        # Do this before the user gets to the web page
-        for instructor in df['instructor'].unique():
-            if str(instructor).endswith(course_title_search.upper()):
-                df.loc[df['instructor'] == instructor, 'instructor'] = instructor[:-4]
-        for course in df['course'].unique():
-            if str(course)[-3:].startswith('2'):
-                instructor = df.loc[df['course'] == course, 'instructor'].iloc[0]
-                df.loc[df['course'] == course, 'instructor'] = instructor + " (H)"
-    except:
-        pass
             
     return df
 
@@ -105,8 +92,7 @@ def main():
     exclude_summer = st.checkbox("Exclude Summer Terms", value=True)
     course_title_search = st.text_input("Search by Course Title (e.g., CSCE, MATH)")
     course_id_search = st.text_input("Search by Course ID (e.g., 120, 251)")
-    with st.spinner('Loading data...'):
-        filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
+    filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
     filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
 
     if filtered_df.empty:
@@ -126,7 +112,9 @@ def main():
         st.markdown('<p class="small-font">You can hover over the graph to see the exact GPA for each instructor and term. Double click on an instructor in the legend to highlight their GPA trend, or click to hide them.</p>', unsafe_allow_html=True)
         st.plotly_chart(fig)
         best_instructors(processed_df)
-        renamed_df = processed_df.rename(columns={"instructor": "Instructor", "gpa": "Average GPA", "year": "Year", "term": "Term", "course": "Course", "section": "Section", "students": "Students", "total": "Students"})
+        renamed_df = processed_df.rename(columns={"instructor": "Instructor", "gpa": "Average GPA", "year": "Year", 
+                                                  "term": "Term", "course": "Course", "section": "Section", 
+                                                  "students": "Students", "total": "Students", "final_total": "Total Students"})
         renamed_df = renamed_df.set_index(pd.Index(renamed_df["Instructor"]))
         renamed_df.drop(columns=["Instructor"], inplace=True)
         st.dataframe(renamed_df.style.hide(axis="index"), width=2000, height=500)

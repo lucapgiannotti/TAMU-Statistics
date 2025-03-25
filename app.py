@@ -5,7 +5,13 @@ import asyncio
 st.set_page_config(page_title="TAMU Statistics", page_icon="📊")
 
 st.title("Welcome to the TAMU Statistics App!")
-st.write("This is a simple Streamlit app that demonstrates how to use Streamlit for building interactive web applications. The app includes a navigation menu to explore different features or pages.")
+st.write("""
+This app provides insights into grade and GPA distributions at Texas A&M University. 
+It allows users to explore data by class, college, and term, offering a comprehensive 
+view of academic performance trends. Whether you're a student, professor, or researcher, 
+this tool is designed to help you make data-driven decisions and gain a deeper understanding 
+of academic statistics at TAMU.
+""")
 
 # Description of each navigation_menu option
 st.subheader("Navigation Menu Options:")
