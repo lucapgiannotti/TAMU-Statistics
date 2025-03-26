@@ -25,6 +25,8 @@ def load_data(file_path):
     with st.spinner("Loading data...", show_time=True):
         try:
             data = pd.read_csv(file_path)
+            data = data.set_index(pd.Index(data["GPA Group"]))
+            data.drop(columns=["GPA Group"], inplace=True)
             return data
         except FileNotFoundError:
             st.error(f"File not found: {file_path}")
@@ -45,47 +47,50 @@ def extract_gpa_midpoint(gpa_group):
         return (float(lower) + float(upper)) / 2
 
 def calculate_weighted_average_gpa(row, gender):
-    total = 0
     weighted_sum = 0
-    for year in ['Freshman', 'Sophomore', 'Junior', 'Senior']:
-        count = row[f'{year} {gender}']
-        weighted_sum += count
-        total += count
-    return weighted_sum if total > 0 else 0
-
-def calculate_gpa_stats(df, class_level, gender):
-    total_students = df[f'{class_level} {gender}'].sum()
-    total_gpa = (df['GPA Midpoint'] * df[f'{class_level} {gender}']).sum()
-    average_gpa = total_gpa / total_students if total_students > 0 else 0
-    return average_gpa
+    total_students = 0
+    for class_level in ['Freshman', 'Sophomore', 'Junior', 'Senior']:
+        student_count = row[f'{class_level} {gender}']
+        weighted_sum += row['GPA Midpoint'] * student_count
+        total_students += student_count
+    return weighted_sum / total_students if total_students > 0 else 0
 
 def descriptive_statistics(data):
     st.write("## 1. Descriptive Statistics")
-    st.write("#### 1.1. Basic Statistics of GPA Groups")
-    st.write(data['GPA Group'].describe())
 
     data['Total Students'] = data[['Freshman Total', 'Sophomore Total', 'Junior Total', 'Senior Total']].sum(axis=1)
     overall_total_students = data['Total Students'].sum()
     data['Percentage'] = (data['Total Students'] / overall_total_students) * 100
 
-    st.write("#### 1.1.1. Total Students and Percentage by GPA Group")
+    st.write("#### 1.1. Total Students and Percentage by GPA Group")
     st.write(f"**Total Students:** {overall_total_students:,}")
-    st.dataframe(data[['GPA Group', 'Total Students', 'Percentage']])
+    st.dataframe(data[['Total Students', 'Percentage']])
 
-    st.write("#### 1.2. Aggregated Data: Gender-wise Performance")
+    st.write("#### 1.2. Aggregated Data: Student Count by Gender")
     gender_summary = data[[col for col in data.columns if 'Male' in col or 'Female' in col]].sum()
-    new_index = [label.split('.')[0] for label in gender_summary.index]
-    gender_summary.index = new_index
-    st.dataframe(gender_summary)
+    gender_summary_df = pd.DataFrame(gender_summary, columns=['Student Count'])
+    st.dataframe(gender_summary_df)
 
 def hypothesis_testing(data):
     st.write("## 2. Hypothesis Testing")
-    st.write("#### 2.1. GPA across class levels")
-    data_melted = pd.melt(data, id_vars=['GPA Group'], value_vars=['Freshman Total', 'Sophomore Total', 'Junior Total', 'Senior Total'], var_name='Class Level', value_name='Student Count')
-    
-    st.write("##### Box Plots: GPA Distributions by Class Level")
-    fig_box, ax_box = plt.subplots(figsize=(12, 6))
-    sns.boxplot(x='Class Level', y='Student Count', data=data_melted, ax=ax_box)
+    st.write("#### 2.1. GPA Across Class Levels")
+
+    # Expand the data so that each student is represented by a single row
+    student_rows = []
+    for idx, row in data.iterrows():
+        gpa_val = row['GPA Midpoint']
+        for level in ['Freshman', 'Sophomore', 'Junior', 'Senior']:
+            count_val = row[f'{level} Total']
+            for _ in range(int(count_val)):
+                student_rows.append({'Class Level': level, 'GPA': gpa_val})
+
+
+    expanded_df = pd.DataFrame(student_rows)
+
+    st.write("##### Box Plot: GPA Distribution by Class Level")
+    fig_box, ax_box = plt.subplots(figsize=(10, 6))
+    sns.boxplot(x='Class Level', y='GPA', data=expanded_df, ax=ax_box)
+    ax_box.set_title("GPA Distribution by Class Level")
     st.pyplot(fig_box)
 
 def trend_pattern_analysis(data):
@@ -94,97 +99,124 @@ def trend_pattern_analysis(data):
     st.write("##### Line Plot: GPA Trends across Class Years")
     fig_line, ax_line = plt.subplots(figsize=(12, 6))
     for class_level in ['Freshman Total', 'Sophomore Total', 'Junior Total', 'Senior Total']:
-        ax_line.plot(data['GPA Group'], data[class_level], marker='o', label=class_level)
-    ax_line.set_xlabel('GPA Group')
+        ax_line.plot(data['GPA Midpoint'], data[class_level], marker='o', label=class_level)
+    ax_line.set_xlabel('GPA Midpoint')
     ax_line.set_ylabel('Number of Students')
     ax_line.set_title('GPA Trends across Class Years')
-    ax_line.tick_params(axis='x', rotation=45)
     ax_line.legend()
     st.pyplot(fig_line)
+    
+def gender_based_analysis(data):
+    st.write("## 4. Gender-Based GPA Analysis")
 
-def college_visualization(data):
-    st.write("## 4. Visualization for Each College")
+    # Stacked Bar Plot: Gender Distribution across GPA Groups
     st.write("#### 4.1. Distribution of GPA groups for male and female students")
-    st.write("##### Stacked Bar Plot: Gender Distribution across Class Levels")
     fig_stacked, ax_stacked = plt.subplots(figsize=(12, 6))
-    data[['GPA Group', 'Freshman Male', 'Freshman Female']].set_index('GPA Group').plot(kind='bar', stacked=True, ax=ax_stacked)
-    ax_stacked.set_xlabel('GPA Group')
-    ax_stacked.set_ylabel('Number of Students')
-    ax_stacked.set_title('Gender Distribution across Class Levels')
-    ax_stacked.tick_params(axis='x', rotation=45)
-    st.pyplot(fig_stacked)
+    
+    # Ensure that the columns exist before plotting
+    male_cols = [col for col in data.columns if 'Male' in col and col != 'Total']
+    female_cols = [col for col in data.columns if 'Female' in col and col != 'Total']
+    
+    # Combine male and female columns for plotting
+    if male_cols and female_cols:
+        male_data = data[male_cols].sum(axis=1)
+        female_data = data[female_cols].sum(axis=1)
+        
+        # Create a DataFrame for plotting
+        gender_data = pd.DataFrame({'Male': male_data, 'Female': female_data})
+        gender_data.plot(kind='bar', stacked=True, ax=ax_stacked)
+        
+        ax_stacked.set_xlabel('GPA Group')
+        ax_stacked.set_ylabel('Number of Students')
+        ax_stacked.set_title('Gender Distribution across GPA Groups')
+        ax_stacked.tick_params(axis='x', rotation=45)
+        st.pyplot(fig_stacked)
+    else:
+        st.warning("Required 'Male' or 'Female' columns not found for stacked bar plot.")
 
-    st.write("#### 4.2. Box Plots: Compare GPA distributions by class level (already shown above)")
-    st.write("#### 4.3. Stacked Bar Plots: Show gender distribution across class levels (already shown above)")
-
-def gender_based_gpa_comparison(data):
-    st.write("## 5. Gender-Based GPA Comparison")
-
-    data['Male GPA'] = data.apply(lambda row: calculate_weighted_average_gpa(row, 'Male'), axis=1)
-    data['Female GPA'] = data.apply(lambda row: calculate_weighted_average_gpa(row, 'Female'), axis=1)
-
-    total_male_students = data[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male']].sum().sum()
-    total_female_students = data[['Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum().sum()
-
-    total_male_gpa = (data['GPA Midpoint'] * data['Male GPA']).sum()
-    total_female_gpa = (data['GPA Midpoint'] * data['Female GPA']).sum()
-
-    average_male_gpa = total_male_gpa / total_male_students if total_male_students > 0 else 0
-    average_female_gpa = total_female_gpa / total_female_students if total_female_students > 0 else 0
-
-    st.write("##### Comparison of Average GPA between Male and Female Students")
-    fig4, ax4 = plt.subplots(figsize=(8, 6))
-    genders = ['Male', 'Female']
-    average_gpa = [average_male_gpa, average_female_gpa]
-    ax4.bar(genders, average_gpa, color=['blue', 'pink'])
-    ax4.set_xlabel('Gender')
-    ax4.set_ylabel('Average GPA')
-    ax4.set_title('Comparison of Average GPA between Male and Female Students')
-    ax4.set_ylim(0, 4.0)
-    plt.tight_layout()
-    st.pyplot(fig4)
-
-def gpa_class_level_statistics(data):
-    st.write("## 6. GPA and Class Level Statistics")
-
+    # Line Plot: Average GPA by Gender and Class Level
+    st.write("#### 4.2. Comparison of average GPA between genders across class levels")
     class_levels = ['Freshman', 'Sophomore', 'Junior', 'Senior']
-    genders = ['Male', 'Female']
+    
+    # Calculate GPA values for overall GPA distribution statistics
+    gpa_values = []
+    for index, row in data.iterrows():
+        gpa = row['GPA Midpoint']
+        total_students_in_range = row[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male',
+                                        'Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum()
+        gpa_values.extend([gpa] * int(total_students_in_range))
+
+    gpa_series = pd.Series(gpa_values)
+
     summary_data = []
 
     for class_level in class_levels:
-        male_gpa = calculate_gpa_stats(data, class_level, 'Male')
-        female_gpa = calculate_gpa_stats(data, class_level, 'Female')
-        total_students = data[f'{class_level} Male'].sum() + data[f'{class_level} Female'].sum()
-        total_gpa = (data['GPA Midpoint'] * (data[f'{class_level} Male'] + data[f'{class_level} Female'])).sum()
-        average_gpa = total_gpa / total_students if total_students > 0 else 0
-        summary_data.append([male_gpa, female_gpa, average_gpa])
+        total_male_students = data[f'{class_level} Male'].sum()
+        total_female_students = data[f'{class_level} Female'].sum()
+        total_students = total_male_students + total_female_students
+        
+        # Calculate weighted GPA for male and female students
+        male_weighted_gpa = (data['GPA Midpoint'] * data[f'{class_level} Male']).sum()
+        female_weighted_gpa = (data['GPA Midpoint'] * data[f'{class_level} Female']).sum()
+        
+        # Calculate average GPA for male and female students
+        average_male_gpa = male_weighted_gpa / total_male_students if total_male_students > 0 else 0
+        average_female_gpa = female_weighted_gpa / total_female_students if total_female_students > 0 else 0
+        average_total_gpa = (male_weighted_gpa + female_weighted_gpa) / total_students if total_students > 0 else 0
+        
+        summary_data.append([average_male_gpa, average_female_gpa, average_total_gpa])
 
+    # Calculate totals across all class levels
     total_male_students = data[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male']].sum().sum()
     total_female_students = data[['Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum().sum()
-    total_students = data['Total Students'].sum()
+    total_students = total_male_students + total_female_students
 
-    data['Weighted Male GPA'] = data['GPA Midpoint'] * data[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male']].sum(axis=1)
-    data['Weighted Female GPA'] = data['GPA Midpoint'] * data[['Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum(axis=1)
-    data['Weighted Total GPA'] = data['GPA Midpoint'] * data['Total Students']
+    # Calculate weighted GPA for all students
+    total_male_gpa = (data['GPA Midpoint'] * data[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male']].sum(axis=1)).sum()
+    total_female_gpa = (data['GPA Midpoint'] * data[['Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum(axis=1)).sum()
+    total_gpa = total_male_gpa + total_female_gpa
 
-    total_male_gpa = data['Weighted Male GPA'].sum()
-    total_female_gpa = data['Weighted Female GPA'].sum()
-    total_gpa = data['Weighted Total GPA'].sum()
-
+    # Calculate average GPA for all students
     average_male_gpa = total_male_gpa / total_male_students if total_male_students > 0 else 0
     average_female_gpa = total_female_gpa / total_female_students if total_female_students > 0 else 0
     average_total_gpa = total_gpa / total_students if total_students > 0 else 0
     summary_data.append([average_male_gpa, average_female_gpa, average_total_gpa])
 
+    # Create DataFrame for summary data
     summary_df = pd.DataFrame(summary_data, index=class_levels + ['Total'], columns=['Male', 'Female', 'Total'])
+    
+    st.dataframe(summary_df)
 
+    class_levels = ['Freshman', 'Sophomore', 'Junior', 'Senior']
+    male_gpa_by_class = summary_df.loc[class_levels, 'Male'].to_dict()
+    female_gpa_by_class = summary_df.loc[class_levels, 'Female'].to_dict()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(class_levels, male_gpa_by_class.values(), marker='o', label='Male', color='blue')
+    ax.plot(class_levels, female_gpa_by_class.values(), marker='o', label='Female', color='pink')
+    ax.set_xlabel('Class Level')
+    ax.set_ylabel('Average GPA')
+    ax.set_title('Average GPA by Gender and Class Level')
+    ax.set_ylim(0, 4.0)
+    ax.legend()
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+def gpa_class_level_statistics(data):
+    st.write("## 6. Overall GPA Distribution Statistics")
+
+    # Collect GPA values for overall GPA distribution statistics
     gpa_values = []
     for index, row in data.iterrows():
         gpa = row['GPA Midpoint']
-        count = row['Total Students']
-        gpa_values.extend([gpa] * int(count))
+        total_students_in_range = row[['Freshman Male', 'Sophomore Male', 'Junior Male', 'Senior Male',
+                                        'Freshman Female', 'Sophomore Female', 'Junior Female', 'Senior Female']].sum()
+        gpa_values.extend([gpa] * int(total_students_in_range))
 
     gpa_series = pd.Series(gpa_values)
+
+    # Calculate GPA distribution statistics
     median_gpa = gpa_series.median()
     q1_gpa = gpa_series.quantile(0.25)
     q3_gpa = gpa_series.quantile(0.75)
@@ -193,16 +225,13 @@ def gpa_class_level_statistics(data):
     percent_above_c = (gpa_series >= 2.0).sum() / len(gpa_series) * 100 if len(gpa_series) > 0 else 0
     percent_above_d = (gpa_series >= 1.0).sum() / len(gpa_series) * 100 if len(gpa_series) > 0 else 0
 
-    st.write("##### GPA Statistics by Class Level and Gender")
-    st.dataframe(summary_df)
 
-    st.write("##### Overall GPA Distribution Statistics")
-    st.write(f"Median GPA: {median_gpa:.2f}")
-    st.write(f"First Quartile (Q1): {q1_gpa:.2f}")
-    st.write(f"Third Quartile (Q3): {q3_gpa:.2f}")
-    st.write(f"Percentage of students with GPA above B (3.0): {percent_above_b:.2f}%")
-    st.write(f"Percentage of students with GPA above C (2.0): {percent_above_c:.2f}%")
-    st.write(f"Percentage of students with GPA above D (1.0): {percent_above_d:.2f}%")
+    st.write(f"**Median GPA:** {median_gpa:.2f}")
+    st.write(f"**First Quartile (Q1):** {q1_gpa:.2f}")
+    st.write(f"**Third Quartile (Q3):** {q3_gpa:.2f}")
+    st.write(f"**Percentage of students with GPA above B (3.0):** {percent_above_b:.2f}%")
+    st.write(f"**Percentage of students with GPA above C (2.0):** {percent_above_c:.2f}%")
+    st.write(f"**Percentage of students with GPA above D (1.0):** {percent_above_d:.2f}%")
 
 def main():
     st.title("📊 College GPA Data Explorer")
@@ -223,20 +252,20 @@ def main():
         file_path = selected_file_info["file_path"]
         data = load_data(file_path)
         
-        data['GPA Midpoint'] = data['GPA Group'].apply(extract_gpa_midpoint)
+        data['GPA Midpoint'] = data.index.to_series().apply(extract_gpa_midpoint)
         
         st.write(f"### Showing Data for: **{selected_college.replace('_', ' ')} - {selected_semester.title()} {selected_year}**")
-        st.dataframe(data.head(10))
+        st.dataframe(data.drop(columns=['GPA Midpoint']).style.hide(axis="index"), width=2000, height=500)
 
+
+        descriptive_statistics(data)
         descriptive_statistics(data)
         hypothesis_testing(data)
         trend_pattern_analysis(data)
-        college_visualization(data)
-        gender_based_gpa_comparison(data)
+        gender_based_analysis(data)
         gpa_class_level_statistics(data)
     else:
         st.write("⚠️ No matching data found for the selected combination. Please choose different filters.")
-
 if __name__ == "__main__":
     main()
     credits()

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from pages.templates.menu import navigation_menu, credits
-import datetime
+import datetime, time
 import streamlit as st
 import plotly.express as px
 
@@ -10,12 +10,10 @@ import plotly.express as px
 
 @st.cache_data
 def load_data(file_path):
-    with st.spinner('Loading total course data...', show_time=True):
-        return pd.read_csv(file_path)
+    return pd.read_csv(file_path)
 
-
+@st.cache_data
 def filter_dataframe(df, exclude_summer, course_title_search, course_id_search):
-    """Filters the DataFrame based on user inputs."""
     if exclude_summer:
         df = df[~df['term'].str.contains('Summer', case=False, na=False)]
 
@@ -86,18 +84,32 @@ def main():
     st.set_page_config(page_title="Grade Distribution", page_icon="📊")
     navigation_menu()
     credits()
-
+    #
+    start_time = time.time()
+    #
     df = load_data("csv_data/gradeDistribution/combined_grade_distribution.csv")
-
+    #
+    execution_time = round(time.time() - start_time, 4)
+    print(f"Loading data time: {execution_time} seconds")
+    #
     exclude_summer = st.checkbox("Exclude Summer Terms", value=True)
     course_title_search = st.text_input("Search by Course Title (e.g., CSCE, MATH)")
     course_id_search = st.text_input("Search by Course ID (e.g., 120, 251)")
+    #
+    start_time = time.time()
+    #
     filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
     filtered_df = filter_dataframe(df, exclude_summer, course_title_search, course_id_search)
-
+    #
+    execution_time = round(time.time() - start_time, 4)
+    print(f"Filtering data time: {execution_time} seconds")
+    #
     if filtered_df.empty:
         st.write("No results found.")
     elif course_title_search or course_id_search:
+        # 
+        start_time = time.time()
+        # 
         processed_df = process_dataframe(filtered_df)
         fig = create_gpa_plot(processed_df)
         st.markdown("---")
@@ -111,6 +123,10 @@ def main():
 
         st.markdown('<p class="small-font">You can hover over the graph to see the exact GPA for each instructor and term. Double click on an instructor in the legend to highlight their GPA trend, or click to hide them.</p>', unsafe_allow_html=True)
         st.plotly_chart(fig)
+        #
+        execution_time = round(time.time() - start_time, 4)
+        print(f"Creating GPA plot time: {execution_time} seconds")
+        #
         best_instructors(processed_df)
         renamed_df = processed_df.rename(columns={"instructor": "Instructor", "gpa": "Average GPA", "year": "Year", 
                                                   "term": "Term", "course": "Course", "section": "Section", 

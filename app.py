@@ -17,9 +17,9 @@ of academic statistics at TAMU.
 st.subheader("Navigation Menu Options:")
 st.write("""
 1. **Home**: The main landing page of the app with a welcome message and overview.
-2. **Grade Distribution**: Search for a specific class (CSCE 120, ENGR 181) and view average GPA by year, term, and professor.
-3. **GPA Distribution**: View graphs and statistics about a specific college (Engineering, Public Health), including total students, average GPA, and more.
-4. **Cumulative GPA**: WORK IN PROGRESS.
+2. **Grade Distribution**: Search for a specific class (CSCE 120, MATH 251) and view average GPA by year, term, and professor for the selected year and term.
+3. **GPA Distribution**: View graphs and statistics about a specific college (Engineering, Public Health), including total students, average GPA, and more. This option provides insights into GPA statistics for a specific college or department during a selected term or year. It focuses on a particular time frame, offering detailed data for that period.
+4. **Cumulative GPA**: Similar to GPA Distribution, but all data is cumulative and includes all years and terms up to the selected semester. This option aggregates GPA data across all terms and years up to the selected semester. It provides a broader view of academic performance trends over time, rather than focusing on a single term or year.
 """)
 
 # Footer
