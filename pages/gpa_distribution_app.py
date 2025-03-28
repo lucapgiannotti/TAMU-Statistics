@@ -69,8 +69,14 @@ def descriptive_statistics(data):
     st.write("#### 1.2. Aggregated Data: Student Count by Gender")
     gender_summary = data[[col for col in data.columns if 'Male' in col or 'Female' in col]].sum()
     gender_summary_df = pd.DataFrame(gender_summary, columns=['Student Count'])
-    st.dataframe(gender_summary_df)
 
+    total_men = gender_summary_df.loc[gender_summary_df.index.str.contains('Male'), 'Student Count'].sum()
+    total_women = gender_summary_df.loc[gender_summary_df.index.str.contains('Female'), 'Student Count'].sum()
+    gender_summary_df.loc['Total Men'] = total_men
+    gender_summary_df.loc['Total Women'] = total_women
+
+    st.dataframe(gender_summary_df)
+    
 def hypothesis_testing(data):
     st.write("## 2. Hypothesis Testing")
     st.write("#### 2.1. GPA Across Class Levels")
