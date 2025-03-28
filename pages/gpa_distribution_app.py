@@ -272,7 +272,6 @@ def main():
 
 
         descriptive_statistics(data)
-        descriptive_statistics(data)
         hypothesis_testing(data)
         trend_pattern_analysis(data)
         gender_based_analysis(data)
