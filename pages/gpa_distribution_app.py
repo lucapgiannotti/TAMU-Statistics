@@ -72,10 +72,17 @@ def descriptive_statistics(data):
 
     total_men = gender_summary_df.loc[gender_summary_df.index.str.contains('Male'), 'Student Count'].sum()
     total_women = gender_summary_df.loc[gender_summary_df.index.str.contains('Female'), 'Student Count'].sum()
-    gender_summary_df.loc['Total Men'] = total_men
-    gender_summary_df.loc['Total Women'] = total_women
 
     st.dataframe(gender_summary_df)
+
+    st.write(f"**Total Men:** {total_men:,}")
+    st.write(f"**Total Women:** {total_women:,}")
+
+    if total_women > 0:
+        ratio = total_men / total_women
+        st.write(f"**Ratio (Men:Women):** {ratio:.2f}")
+    else:
+        st.write("**Ratio (Men:Women):** Undefined (no women in data)")
     
 def hypothesis_testing(data):
     st.write("## 2. Hypothesis Testing")
